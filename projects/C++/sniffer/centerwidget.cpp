@@ -79,10 +79,7 @@ void CenterWidget::render(int index) {
 void CenterWidget::new_tabs(std::vector<std::string> newtabs) {
   std::vector<std::string>::iterator itr;
   for(itr = newtabs.begin(); itr != newtabs.end(); itr++)
-    //std::cout << itr->c_str() << std::endl;
-
     tabs->addTab(new QTextEdit(), itr->c_str());
-  //QString *x = new QString(itr->c_str());
 }
 
 void CenterWidget::sniff() {
@@ -104,12 +101,5 @@ void CenterWidget::sniff() {
     second_loop->start() ;
     second_loop->detach();
   }
-
-  /*
-  QTextCursor prev_cursor = edit->textCursor();
-  myTextEdit->moveCursor (QTextCursor::End);
-  myTextEdit->insertPlainText (myString);
-  myTextEdit->setTextCursor (&prev_cursor);
-  */
 }
 #endif

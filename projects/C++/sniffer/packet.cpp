@@ -1,8 +1,48 @@
 #ifndef _PACKET_CPP_
 #define _PACKET_CPP_
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
 #include "packet.h"
 
-tcp_packet::tcp_packet(const u_char *packet) {
+raw_frame::raw_frame(const u_char* f, int size) {
+  try {
+    frame = new char[size];
+
+  } catch(const std::bad_alloc& e) {
+    std::cout << "ERROR: Can't allocate " << size << " bytes." << std::endl;
+    std::exit(1);
+  }
+
+  std::memset(frame, '\0', size);
+  std::memcpy(frame, f, size);
+}
+
+raw_frame::raw_frame(const raw_frame& rhs) {
+  size = rhs.size;
+
+  try {
+    frame = new char[size];
+  } catch(const std::bad_alloc& e) {
+    std::cout << "ERROR: Can't allocate " << size << " bytes." << std::endl;
+    std::exit(1);
+  }
+
+  std::memset(frame, '\0', size);
+  std::memcpy(frame, rhs.frame, rhs.size);
+}
+
+raw_frame::~raw_frame() {
+  delete [] frame;
+}
+
+char* raw_frame::c_str() const{
+  return frame;
+}
+
+tcp_packet::tcp_packet(const raw_frame& frame) {
+  char* packet = frame.c_str();
+
   struct ether_header* eth;
   struct iphdr* ip;
   struct tcphdr* tcp;
@@ -16,7 +56,6 @@ tcp_packet::tcp_packet(const u_char *packet) {
 
   if(ntohs(eth->ether_type) != ETHERTYPE_IP)
     throw std::string("Not an IP Packet");
-
 
   ip = (struct iphdr*)(packet + sizeof(struct ether_header));
   raw_src_ip = *(reinterpret_cast<struct in_addr*>(&ip->saddr));

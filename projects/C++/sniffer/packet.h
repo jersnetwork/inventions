@@ -10,6 +10,19 @@
 #include <netinet/tcp.h>
 #include <string>
 
+class raw_frame {
+ private:
+  char* frame;
+  int size;
+  raw_frame(){}
+
+ public:
+  char* c_str() const;
+  raw_frame(const u_char* contents, int size);
+  raw_frame(const raw_frame& rhs);
+  ~raw_frame();
+};
+
 class tcp_packet {
 private:
   std::string payload;
@@ -21,7 +34,7 @@ private:
   int syn, fin;
 
 public:
-  tcp_packet(const u_char *packet);
+  tcp_packet(const raw_frame& rhs);
   const std::string& get_src_ip() const;
   const std::string& get_dst_ip() const;
   const std::string& get_data() const;

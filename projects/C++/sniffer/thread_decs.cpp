@@ -3,31 +3,37 @@
 
 #include <set>
 #include <string>
+#include <iostream>
 #include "sniffer.h"
 #include "qtcpstack.h"
-#include "threading.h"
 #include "thread_decs.h"
 
 template <class T1, class T2>
-  StackBuilder<T1, T2>::StackBuilder(T1& sr1, T2& sr2, threading::lock& l1, threading::lock& l2):
-  stack(sr1), sniffer(sr2), sys_lock(l1), net_lock(l2) {}
+  StackBuilder<T1, T2>::StackBuilder(T1& sr1, T2& sr2, threading::lock& l1, threading::lock& l2)
+    : stack(sr1), sniffer(sr2), sys_lock(l1), net_lock(l2) {}
 
 template <class T1, class T2>
-    void StackBuilder<T1, T2>::run() {
-  while(1) {
+void StackBuilder<T1, T2>::run() {
+  while(true) {
     net_lock.aquire();
-    tcp_packet p = sniffer.sniff();
+    raw_frame ether = sniffer.sniff();
     net_lock.release();
 
-    sys_lock.aquire();
-    stack.insert(p);
-    sys_lock.release();
+    try {
+      tcp_packet tcp(ether);
+      sys_lock.aquire();
+      stack.insert(tcp);
+      sys_lock.release();
+      //stack.trigger_update(tcp.get_data());
+    } catch (std::string e) {
+      continue;
+    }
   }
 }
 
 template <class T1>
-StackWatcher<T1>::StackWatcher(T1& sr,  threading::lock& l1):
-stack(sr), sys_lock(l1) {}
+StackWatcher<T1>::StackWatcher(T1& sr,  threading::lock& l1)
+  : stack(sr), sys_lock(l1) {}
 
 template <class T1>
 void StackWatcher<T1>::run() {
@@ -35,7 +41,7 @@ void StackWatcher<T1>::run() {
   int current_connections = 0;
   std::vector<std::string> connections = stack.list_streams();
 
-  while (1) {
+  while (true) {
     sys_lock.aquire();
     current_connections = stack.num_connections();
     sys_lock.release();
@@ -56,4 +62,5 @@ void StackWatcher<T1>::run() {
     num_connections = current_connections;
   }
 }
+
 #endif

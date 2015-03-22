@@ -16,13 +16,15 @@
 class Sniffer {
  private:
   pcap_t * session_handle;
+  int fd;
+
   std::string device_name;
   Sniffer() {};
 
  public:
   static const  std::vector<std::string> list_devices();
   Sniffer(const std::string& dev, const std::string filter);
-  tcp_packet sniff();
+  raw_frame sniff();
   ~Sniffer();
 };
 #endif
