@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <set>
 #include <fstream>
-#include <iostream>
 
 #include "centerwidget.h"
 #include "threading.h"
@@ -27,7 +26,12 @@ CenterWidget::CenterWidget(QWidget *parent) : QWidget(parent) {
   second_loop = NULL;
   machine = new QTcpStack();
 
+  QPalette* palette = new QPalette();
+  palette->setColor(QPalette::Base, Qt::black);
   edit = new QTextEdit(this);
+  edit->setTextColor( QColor( "green" ) );
+  edit->setPalette(*palette);
+
   tabs = new QTabWidget(edit);
   tabs->setFixedHeight(25);
   tabs->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -89,15 +93,15 @@ void CenterWidget::sniff() {
   if (sniffer == NULL)
     sniffer = new Sniffer(selected_dev, selected_filter);
 
-  // construct thread
+  // construct threads
   if (main_loop == NULL) {
-    main_loop = new StackBuilder<QTcpStack, Sniffer>(*machine, *sniffer, sys_lock, net_lock);
+    main_loop = new StackBuilder<QTcpStack, Sniffer>(*machine, *sniffer, sys_lock, net_lock, poll_cond);
     main_loop->start();
     main_loop->detach();
   }
 
   if (second_loop == NULL) {
-    second_loop = new StackWatcher<QTcpStack>(*machine, sys_lock);
+    second_loop = new StackWatcher<QTcpStack>(*machine, sys_lock, poll_cond, poll_lock);
     second_loop->start() ;
     second_loop->detach();
   }

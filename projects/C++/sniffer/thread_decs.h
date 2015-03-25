@@ -13,11 +13,14 @@ class StackBuilder: public threading::thread {
   T1& stack;
   T2& sniffer;
 
+  threading::condition& poll_cond;
+
   threading::lock& sys_lock;
   threading::lock& net_lock;
 
  public:
-  StackBuilder(T1& sr1, T2& sr2, threading::lock& l1, threading::lock& l2);
+  StackBuilder(T1& sr1, T2& sr2, threading::lock& l1,
+               threading::lock& l2, threading::condition& poll_cond);
   void run();
 };
 
@@ -26,9 +29,12 @@ class StackWatcher: public threading::thread {
  private:
   T1& stack;
   threading::lock& sys_lock;
+  threading::lock& poll_lock;
+  threading::condition& poll_cond;
 
  public:
-  StackWatcher(T1& sr1, threading::lock& l1);
+  StackWatcher(T1& sr1, threading::lock& l1,
+               threading::condition& poll_cond, threading::lock& poll_lock);
   void run();
 };
 #endif

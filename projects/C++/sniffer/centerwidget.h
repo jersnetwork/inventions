@@ -24,6 +24,9 @@ class CenterWidget: public QWidget {
   threading::lock sys_lock;
   threading::lock net_lock;
 
+  threading::condition poll_cond;
+  threading::lock poll_lock;
+
  signals:
   void toggle_sniffer_act(bool);
 

@@ -3,14 +3,16 @@
 
 #include <set>
 #include <string>
-#include <iostream>
 #include "sniffer.h"
 #include "qtcpstack.h"
 #include "thread_decs.h"
 
 template <class T1, class T2>
-  StackBuilder<T1, T2>::StackBuilder(T1& sr1, T2& sr2, threading::lock& l1, threading::lock& l2)
-    : stack(sr1), sniffer(sr2), sys_lock(l1), net_lock(l2) {}
+StackBuilder<T1, T2>::StackBuilder(T1& sr1, T2& sr2, threading::lock& l1,
+                                   threading::lock& l2, threading::condition& pc)
+  : stack(sr1), sniffer(sr2), sys_lock(l1), net_lock(l2), poll_cond(pc) {}
+
+
 
 template <class T1, class T2>
 void StackBuilder<T1, T2>::run() {
@@ -24,7 +26,9 @@ void StackBuilder<T1, T2>::run() {
       sys_lock.aquire();
       stack.insert(tcp);
       sys_lock.release();
-      //stack.trigger_update(tcp.get_data());
+
+      poll_cond.signal();
+
     } catch (std::string e) {
       continue;
     }
@@ -32,34 +36,49 @@ void StackBuilder<T1, T2>::run() {
 }
 
 template <class T1>
-StackWatcher<T1>::StackWatcher(T1& sr,  threading::lock& l1)
-  : stack(sr), sys_lock(l1) {}
+StackWatcher<T1>::StackWatcher(T1& sr,  threading::lock& l1, threading::condition& pc, threading::lock& pl)
+  : stack(sr), sys_lock(l1), poll_cond(pc), poll_lock(pl) {}
 
 template <class T1>
 void StackWatcher<T1>::run() {
   int num_connections = 0;
   int current_connections = 0;
   std::vector<std::string> connections = stack.list_streams();
+  std::vector<std::string> update;
+  std::vector<std::string> new_tabs;
+  std::set<std::string> diff;
 
   while (true) {
+    poll_lock.aquire();
+    poll_cond.wait(poll_lock);
+    poll_lock.release();
+
     sys_lock.aquire();
     current_connections = stack.num_connections();
     sys_lock.release();
 
     if (num_connections < current_connections) {
       sys_lock.aquire();
-      std::vector<std::string> update = stack.list_streams();
+      update = stack.list_streams();
       sys_lock.release();
 
       std::set<std::string> s1(connections.begin(), connections.end());
       std::set<std::string> s2(update.begin(), update.end());
-      std::vector<std::string> diff;
-      std::set_intersection(connections.begin(), connections.end(),
-                            update.begin(), update.end(), std::back_inserter(diff));
+
+      std::set_difference(update.begin(),
+                          update.end(),
+                          connections.begin(),
+                          connections.end(),
+                          std::inserter(diff,
+                                        diff.end()));
+
+      std::copy(diff.begin(), diff.end(), std::back_inserter(new_tabs));
+      stack.trigger_update(new_tabs);
+      num_connections = current_connections;
       connections = update;
-      stack.trigger_update(diff);
+      new_tabs.clear();
+      diff.clear();
     }
-    num_connections = current_connections;
   }
 }
 
