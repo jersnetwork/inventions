@@ -40,7 +40,7 @@ threading::condition::~condition() {
 threading::thread::~thread() {}
 
 threading::thread::thread()
-  : detached(false), started(false), start_mutex(), idle_cond() {
+  : detached(false), started(false), idle_cond() {
   idle_mutex.aquire();
   int ret = pthread_create(&tid, NULL, &threading::task, this);
   if (ret)

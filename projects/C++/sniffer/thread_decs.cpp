@@ -12,8 +12,6 @@ StackBuilder<T1, T2>::StackBuilder(T1& sr1, T2& sr2, threading::lock& l1,
                                    threading::lock& l2, threading::condition& pc)
   : stack(sr1), sniffer(sr2), sys_lock(l1), net_lock(l2), poll_cond(pc) {}
 
-
-
 template <class T1, class T2>
 void StackBuilder<T1, T2>::run() {
   while(true) {
@@ -24,7 +22,8 @@ void StackBuilder<T1, T2>::run() {
     try {
       tcp_packet tcp(ether);
       sys_lock.aquire();
-      stack.insert(tcp);
+      if (tcp.get_data().length() > 0)
+        stack.insert(tcp);
       sys_lock.release();
 
       poll_cond.signal();
@@ -36,11 +35,11 @@ void StackBuilder<T1, T2>::run() {
 }
 
 template <class T1>
-StackWatcher<T1>::StackWatcher(T1& sr,  threading::lock& l1, threading::condition& pc, threading::lock& pl)
+TabCreator<T1>::TabCreator(T1& sr,  threading::lock& l1, threading::condition& pc, threading::lock& pl)
   : stack(sr), sys_lock(l1), poll_cond(pc), poll_lock(pl) {}
 
 template <class T1>
-void StackWatcher<T1>::run() {
+void TabCreator<T1>::run() {
   int num_connections = 0;
   int current_connections = 0;
   std::vector<std::string> connections = stack.list_streams();

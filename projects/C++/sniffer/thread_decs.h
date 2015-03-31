@@ -25,7 +25,7 @@ class StackBuilder: public threading::thread {
 };
 
 template <class T1>
-class StackWatcher: public threading::thread {
+class TabCreator: public threading::thread {
  private:
   T1& stack;
   threading::lock& sys_lock;
@@ -33,7 +33,7 @@ class StackWatcher: public threading::thread {
   threading::condition& poll_cond;
 
  public:
-  StackWatcher(T1& sr1, threading::lock& l1,
+  TabCreator(T1& sr1, threading::lock& l1,
                threading::condition& poll_cond, threading::lock& poll_lock);
   void run();
 };

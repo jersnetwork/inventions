@@ -36,13 +36,7 @@ namespace threading {
     bool detached;
     condition idle_cond;
     lock idle_mutex;
-
-    condition start_cond;
-    lock start_mutex;
-
-
     bool started;
-
 
   protected:
     virtual void run() = 0;
@@ -54,7 +48,6 @@ namespace threading {
     void join();
     void detach();
     void kill();
-
     void start();
     friend void* threading::task(void* x);
   };

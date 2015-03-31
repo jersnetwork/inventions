@@ -10,7 +10,7 @@ class CenterWidget: public QWidget {
   Q_OBJECT
 
  private:
-  //DeviceDialog *dialog;
+  int num_cores;
   QTextEdit *edit;
   QTabWidget *tabs;
 
@@ -19,11 +19,9 @@ class CenterWidget: public QWidget {
   Sniffer* sniffer;
   QTcpStack* machine;
 
-  threading::thread* main_loop;
-  threading::thread* second_loop;
+  std::vector<threading::thread*> threads;
   threading::lock sys_lock;
   threading::lock net_lock;
-
   threading::condition poll_cond;
   threading::lock poll_lock;
 
@@ -39,5 +37,6 @@ class CenterWidget: public QWidget {
     void save_data();
   public:
     CenterWidget(QWidget *parent = 0);
+    ~CenterWidget();
 };
 #endif

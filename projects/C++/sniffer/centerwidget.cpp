@@ -1,5 +1,7 @@
 #ifndef _CENTER_CPP_
 #define _CENTER_CPP_
+#include <unistd.h>
+
 #include <QToolBar>
 #include <QTabWidget>
 #include <QIcon>
@@ -19,13 +21,11 @@
 #include "qtcpstack.h"
 #include "sniffer.h"
 
-CenterWidget::CenterWidget(QWidget *parent) : QWidget(parent) {
-  sniffer = NULL;
-  machine = NULL;
-  main_loop = NULL;
-  second_loop = NULL;
-  machine = new QTcpStack();
+CenterWidget::CenterWidget(QWidget *parent) : QWidget(parent), sniffer(NULL), machine(NULL) {
+  num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+  threads.reserve(num_cores);
 
+  machine = new QTcpStack();
   QPalette* palette = new QPalette();
   palette->setColor(QPalette::Base, Qt::black);
   edit = new QTextEdit(this);
@@ -65,6 +65,13 @@ void CenterWidget::save_data() {
   myfile.close();
 }
 
+CenterWidget::~CenterWidget() {
+  std::vector<threading::thread*>::iterator itr;
+  for(itr = threads.begin(); itr!= threads.end(); itr++)
+    delete *itr;
+}
+
+
 void CenterWidget::accept_interface(std::string net) {
   selected_dev = std::string(net.c_str());
 }
@@ -88,22 +95,23 @@ void CenterWidget::new_tabs(std::vector<std::string> newtabs) {
 
 void CenterWidget::sniff() {
   emit toggle_sniffer_act(false);
+  std::vector<threading::thread*>::iterator itr;
 
   // construct sniffers
   if (sniffer == NULL)
     sniffer = new Sniffer(selected_dev, selected_filter);
 
   // construct threads
-  if (main_loop == NULL) {
-    main_loop = new StackBuilder<QTcpStack, Sniffer>(*machine, *sniffer, sys_lock, net_lock, poll_cond);
-    main_loop->start();
-    main_loop->detach();
-  }
+  if (threads.empty()) {
+    for(int i = 0; i < num_cores; i++)
+      threads.push_back(new StackBuilder<QTcpStack, Sniffer>(*machine, *sniffer, sys_lock, net_lock, poll_cond));
+    threads.push_back(new TabCreator<QTcpStack>(*machine, sys_lock, poll_cond, poll_lock));
 
-  if (second_loop == NULL) {
-    second_loop = new StackWatcher<QTcpStack>(*machine, sys_lock, poll_cond, poll_lock);
-    second_loop->start() ;
-    second_loop->detach();
+    for(itr = threads.begin(); itr!= threads.end(); itr++)
+      (*itr)->start();
+
+    for(itr = threads.begin(); itr!= threads.end(); itr++)
+      (*itr)->detach();
   }
 }
 #endif
