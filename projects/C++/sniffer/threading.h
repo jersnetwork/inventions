@@ -4,6 +4,8 @@
 
 namespace threading {
 
+  void* task(void* t);
+
   class lock {
     friend class condition;
   private:
@@ -51,7 +53,5 @@ namespace threading {
     void start();
     friend void* threading::task(void* x);
   };
-
-  void* task(void* t);
 }
 #endif
